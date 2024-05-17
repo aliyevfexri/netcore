@@ -1,0 +1,25 @@
+//
+//  File.swift
+//  
+//
+//  Created by Fakhri Aliyev on 11.07.23.
+//
+
+import Foundation
+
+extension URLRequest {
+    public mutating func addAllHTTPHeaderFields(_ newHeaders: [String : String]) {
+        let allHeaders = allHTTPHeaderFields ?? [:]
+        allHTTPHeaderFields = allHeaders.merging(newHeaders) { (current, _) in current }
+    }
+    
+    public func print(){
+        Swift.print("Request ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼")
+        Swift.print("ℹ️ HttpMethod:", httpMethod ?? "❗️")
+        Swift.print("ℹ️ AllHTTPHeaderFields:", allHTTPHeaderFields ?? "❗️")
+        Swift.print("ℹ️ HttpBody:", String(decoding: httpBody ?? Data(), as: UTF8.self))
+        Swift.print("ℹ️ URL:", url?.absoluteString ?? "NO URL")
+        Swift.print("Request ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲")
+    }
+    
+}
