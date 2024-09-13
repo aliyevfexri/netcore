@@ -1,6 +1,5 @@
 import Foundation
 
-
 public protocol HTTPClient {
     @discardableResult
     func sendRequest(to request: URLRequest) async -> Error?

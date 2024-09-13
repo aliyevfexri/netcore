@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum NetworkError: Error, LocalizedError {
+public enum NetCoreError: Error, LocalizedError {
     case backendError(String)
     case unimplementedCase
     
