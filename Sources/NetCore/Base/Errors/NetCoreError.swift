@@ -10,6 +10,7 @@ import Foundation
 public enum NetCoreError: Error, LocalizedError {
     case backendError(String)
     case unimplementedCase
+    case unknownError
     
     public var errorDescription: String {
         switch self {
@@ -17,6 +18,8 @@ public enum NetCoreError: Error, LocalizedError {
             return error
         case .unimplementedCase:
             return "Unimplemented case"
+        case .unknownError:
+            return "Naməlum Xəta"
         }
     }
 }
