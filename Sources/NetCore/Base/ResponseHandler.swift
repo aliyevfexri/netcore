@@ -36,12 +36,11 @@ public class JSONResponseHandler: ResponseHandler {
         case 401:
             return RequestError.expiredAccessToken
         default:
-            let errorResponse: Result<ErrorDescriptionDTO, Error> = decode(with: data)
-            switch errorResponse {
-            case .success(let success):
-                return success
-            case .failure(let error):
-                return RequestError.error(error)
+            do {
+                let error = try decodeError(from: data)
+                return error
+            } catch(let error) {
+                return error
             }
         }
     }
@@ -69,6 +68,12 @@ public class JSONResponseHandler: ResponseHandler {
             return .failure(error)
         }
     }
+    private func decodeError(from data: Data) throws -> Error? {
+        guard let errorModelType = NetCoreConfiguration.shared.errorModelType else {
+            print("No model registered")
+            return NetCoreError.unknownError
+        }
+        let decoder = JSONDecoder()
+        return try decoder.decode(errorModelType, from: data)
+    }
 }
-
-struct ErrorDescriptionDTO: Codable, Error {}
