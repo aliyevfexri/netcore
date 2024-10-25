@@ -104,7 +104,7 @@ extension URLSession {
         Swift.print("Response ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼")
         Swift.print("ℹ️ RequestID:", requestID)
         Swift.print("ℹ️ Response Time:", dateForCurrentTimeZone)
-        if let response { print("ℹ️ Response statusCode: ", statusCode, "\(isSuccess ? "✅":"❌")") }
+        if let response { print("ℹ️ Response statusCode:", statusCode, "\(isSuccess ? "✅":"❌")") }
         switch result {
         case .success(let data):
             if let data {
