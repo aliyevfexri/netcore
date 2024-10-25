@@ -47,9 +47,10 @@ public class AuthenticatedHTTPClient: HTTPClient {
     
     public func sendRequest(to request: URLRequest) async -> Result<(Data, URLResponse), Error> {
         guard networkMonitoring.isConnected else { return .failure(RequestError.lostConnection) }
+        guard let token = tokenProvider.getToken() else { return .failure(RequestError.expiredAccessToken) }
         
         var signedRequest = request
-        signedRequest.addAllHTTPHeaderFields(defaultHeaders)
+        signedRequest.addAllHTTPHeaderFields(defaultHeaders(with: token))
         
         let result:Result<(Data, URLResponse), Error> = await client.sendRequest(to: signedRequest)
         do {
@@ -64,15 +65,12 @@ public class AuthenticatedHTTPClient: HTTPClient {
         }
     }
     
-    private var defaultHeaders: [String : String] {
+    private func defaultHeaders(with token: String) -> [String : String] {
         var headers:[String : String] = [:]
         headers[NetworkConstants.Headers.XPlatform] = "Mobile"
         headers[NetworkConstants.Headers.XClientType] = "iOS"
         headers[NetworkConstants.Headers.ContentType] = "application/json"
-        if let token = tokenProvider.getToken() {
-            headers[NetworkConstants.Headers.Authorization] = "Bearer \(token)"
-        }
-        //...Add aditional headers
+        headers[NetworkConstants.Headers.Authorization] = "Bearer \(token)"
         return headers
     }
     
@@ -89,6 +87,7 @@ public class AuthenticatedHTTPClient: HTTPClient {
             switch result {
             case .success(_):
                 //Token refreshs and should send previous request again
+                requestCounter = 0
                 return nil
             case .failure(let failure):
                 //Should finish request and show error

@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import NetCore
 
 //MARK: - Public functions
 extension URLSession: HTTPClient {
@@ -49,13 +48,16 @@ extension URLSession: HTTPClient {
 extension URLSession {
     private func sendRequest(to request: URLRequest, networkLostCount: Int) async  -> Result<(Data, URLResponse), Error> {
         let networkMonitoring = NetworkMonitor.shared
-        
-        guard networkMonitoring.isConnected else { return .failure(RequestError.lostConnection)}
-        
         var request = request
-        request.addAllHTTPHeaderFields(getDefaultHeaders)
+        let requestID: String = UUID().uuidString
         
-        request.print()
+        guard networkMonitoring.isConnected else {
+            printResponseLogs(requestID: requestID, response: nil, result: .failure(RequestError.lostConnection))
+            return .failure(RequestError.lostConnection)
+        }
+        
+        request.addAllHTTPHeaderFields(getDefaultHeaders)
+        request.printLogs(with: requestID)
         
         var data: Data?
         var response: URLResponse?
@@ -66,26 +68,55 @@ extension URLSession {
             response = sessionResponse
         } catch (let error) {
             if checkNetworkLostRefresh(with: error, and: networkLostCount) {
+                printResponseLogs(requestID: requestID, response: response, result: .failure(error))
                 return await sendRequest(to: request, networkLostCount: networkLostCount+1)
+            } else {
+                printResponseLogs(requestID: requestID, response: response, result: .failure(error))
+                return .failure(error)
             }
-            return .failure(error)
         }
         
         guard let data, let response else {
+            printResponseLogs(requestID: requestID, response: response, result: .failure(RequestError.noResponse))
             return .failure(RequestError.noResponse)
         }
         
-        Swift.print("Response ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼")
-        if let httpsRespone = response as? HTTPURLResponse {
-            print("ℹ️Response statusCode", httpsRespone.statusCode)
-        }
-        print("ℹ️Data", String(decoding: data, as: UTF8.self));
-        Swift.print("Response ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲")
-        
-        guard let handledResult: Error = JSONResponseHandler().handle(with: data, and: response) else {
+        if let handledError = JSONResponseHandler().handle(with: data, and: response) {
+            printResponseLogs(requestID: requestID, response: response, result: .failure(handledError))
+            return .failure(handledError)
+        } else {
+            printResponseLogs(requestID: requestID, response: response, result: .success(data))
             return .success((data, response))
         }
-        return .failure(handledResult)
+    }
+    
+    func printResponseLogs(requestID: String, response: URLResponse?, result: Result<Data?, Error>){
+        let timeDifference = TimeZone.current.secondsFromGMT(for: Date.now)
+        let dateForCurrentTimeZone = Date.now.addingTimeInterval(Double(timeDifference))
+        var isSuccess = (try? result.get() != nil) ?? false
+        switch result {
+        case .success: break;
+        case .failure: isSuccess = false
+        }
+        
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        
+        Swift.print("Response ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼")
+        Swift.print("ℹ️ RequestID:", requestID)
+        Swift.print("ℹ️ Response Time:", dateForCurrentTimeZone)
+        if let response { print("ℹ️ Response statusCode: ", statusCode, "\(isSuccess ? "✅":"❌")") }
+        switch result {
+        case .success(let data):
+            if let data {
+                print("ℹ️ Data", String(decoding: data, as: UTF8.self))
+            } else {
+                print("ℹ️ Data", "data IS NILL")
+            }
+        case .failure(let failure):
+            print("ℹ️ Error", failure);
+        }
+        
+        Swift.print("Response ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲")
     }
     
     private var getDefaultHeaders: [String: String] {
@@ -96,7 +127,7 @@ extension URLSession {
         headers[NetworkConstants.Headers.AcceptLanguage] = "az"//TODO: - Changed Fixed Language
         return headers
     }
-    //TODO: Explain this code. Why is it written
+    
     private func checkNetworkLostRefresh(with error: Error, and previousNetworkLostCount: Int) -> Bool {
         guard (error as? URLError)?.errorCode == -1005 else { return false }
         print("⁉️Critical Error: ", error)
