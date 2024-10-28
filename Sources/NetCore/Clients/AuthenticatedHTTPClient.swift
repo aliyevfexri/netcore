@@ -24,8 +24,8 @@ public class AuthenticatedHTTPClient: HTTPClient {
     }
     
     @discardableResult
-    public func sendRequest(to request: URLRequest) async -> Error? {
-        let result: Result<(Data, URLResponse), Error> = await sendRequest(to: request)
+    public func sendRequest(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async -> Error? {
+        let result: Result<(Data, URLResponse), Error> = await sendRequest(to: request, delegate: delegate)
         switch result {
         case .success:
             return nil
@@ -34,8 +34,8 @@ public class AuthenticatedHTTPClient: HTTPClient {
         }
     }
     
-    public func sendRequest<T:Decodable>(to request: URLRequest) async -> Result<T, Error>{
-        let result: Result<(Data, URLResponse), Error> = await sendRequest(to: request)
+    public func sendRequest<T:Decodable>(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async -> Result<T, Error>{
+        let result: Result<(Data, URLResponse), Error> = await sendRequest(to: request, delegate: delegate)
         switch result {
         case .success((let data, _)):
             let handledResult: Result<T, Error> = JSONResponseHandler().decode(with: data)
@@ -45,20 +45,20 @@ public class AuthenticatedHTTPClient: HTTPClient {
         }
     }
     
-    public func sendRequest(to request: URLRequest) async -> Result<(Data, URLResponse), Error> {
+    public func sendRequest(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async -> Result<(Data, URLResponse), Error> {
         guard networkMonitoring.isConnected else { return .failure(RequestError.lostConnection) }
         guard let token = tokenProvider.getToken() else { return .failure(RequestError.expiredAccessToken) }
         
         var signedRequest = request
         signedRequest.addAllHTTPHeaderFields(defaultHeaders(with: token))
         
-        let result:Result<(Data, URLResponse), Error> = await client.sendRequest(to: signedRequest)
+        let result:Result<(Data, URLResponse), Error> = await client.sendRequest(to: signedRequest, delegate: delegate)
         do {
             let (data, response) = try result.get()
             return .success((data, response))
         } catch(let error) {
             guard let newError = await checkExpiredAccessTokenError(error) else {
-                return await sendRequest(to: request)
+                return await sendRequest(to: request, delegate: delegate)
             }
             handleUnauthorized(newError)
             return .failure(newError)

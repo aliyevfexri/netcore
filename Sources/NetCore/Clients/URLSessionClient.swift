@@ -9,12 +9,12 @@ import Foundation
 
 //MARK: - Public functions
 extension URLSession: HTTPClient {
-    public func sendRequest(to request: URLRequest) async  -> Result<(Data, URLResponse), Error> {
-        return await sendRequest(to: request, networkLostCount: 0)
+    public func sendRequest(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async  -> Result<(Data, URLResponse), Error> {
+        return await sendRequest(to: request, delegate: delegate, networkLostCount: 0)
     }
     
-    public func sendRequest(to request: URLRequest) async -> Error? {
-        let result: Result<(Data, URLResponse), Error> = await sendRequest(to: request)
+    public func sendRequest(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async -> Error? {
+        let result: Result<(Data, URLResponse), Error> = await sendRequest(to: request, delegate: delegate)
         switch result {
         case .success:
             return nil
@@ -23,9 +23,9 @@ extension URLSession: HTTPClient {
         }
     }
     
-    public func sendRequest<T:Decodable>(to request: URLRequest) async -> Result<T, Error> {
+    public func sendRequest<T:Decodable>(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async -> Result<T, Error> {
         
-        let result: Result<(Data, URLResponse), Error> = await sendRequest(to: request)
+        let result: Result<(Data, URLResponse), Error> = await sendRequest(to: request, delegate: delegate)
         
         do{
             let (data, _) = try result.get()
@@ -46,7 +46,7 @@ extension URLSession: HTTPClient {
 
 //MARK: - Private functions
 extension URLSession {
-    private func sendRequest(to request: URLRequest, networkLostCount: Int) async  -> Result<(Data, URLResponse), Error> {
+    private func sendRequest(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?, networkLostCount: Int) async  -> Result<(Data, URLResponse), Error> {
         let networkMonitoring = NetworkMonitor.shared
         var request = request
         let requestID: String = UUID().uuidString
@@ -63,13 +63,13 @@ extension URLSession {
         var response: URLResponse?
         
         do {
-            let (sessionData, sessionResponse) = try await URLSession.shared.data(for: request, delegate: nil)
+            let (sessionData, sessionResponse) = try await URLSession.shared.data(for: request, delegate: delegate)
             data = sessionData
             response = sessionResponse
         } catch (let error) {
             if checkNetworkLostRefresh(with: error, and: networkLostCount) {
                 printResponseLogs(requestID: requestID, response: response, result: .failure(error))
-                return await sendRequest(to: request, networkLostCount: networkLostCount+1)
+                return await sendRequest(to: request, delegate: delegate, networkLostCount: networkLostCount+1)
             } else {
                 printResponseLogs(requestID: requestID, response: response, result: .failure(error))
                 return .failure(error)

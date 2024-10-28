@@ -20,8 +20,8 @@ public class FileUploaderClient {
         self.networkMonitoring = networkMonitoring
     }
     
-    public func sendRequest<T:Decodable>(to request: URLRequest) async  -> Result<T, Error>{
-        let result =  await sendRequest(to: request)
+    public func sendRequest<T:Decodable>(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async  -> Result<T, Error>{
+        let result =  await sendRequest(to: request, delegate: delegate)
         guard let (data, response) = try? result.get() else {
             return .failure(RequestError.noResponse)
         }
@@ -39,7 +39,7 @@ public class FileUploaderClient {
                     requestCounter += 1
                     switch result {
                     case .success(_):
-                        return await sendRequest(to: request)
+                        return await sendRequest(to: request, delegate: delegate)
                     case .failure(let failure):
                         return .failure(failure)
                     }
@@ -52,13 +52,13 @@ public class FileUploaderClient {
         }
     }
     
-    public func sendRequest(to request: URLRequest) async  -> Result<(Data, URLResponse), Error> {
+    public func sendRequest(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async  -> Result<(Data, URLResponse), Error> {
         guard networkMonitoring.isConnected else { return .failure(RequestError.lostConnection)}
 
         var signedRequest = request
         signedRequest.addAllHTTPHeaderFields(await getDefaultHeaders())
 
-        let result:Result<(Data, URLResponse), Error> = await URLSession.shared.sendRequest(to: signedRequest)
+        let result:Result<(Data, URLResponse), Error> = await URLSession.shared.sendRequest(to: signedRequest, delegate: delegate)
 
         switch result {
         case .success(_):
@@ -69,7 +69,7 @@ public class FileUploaderClient {
                     let result =  try await tokenProvider.requestNewToken()
                     switch result {
                     case .success(_):
-                        return try await sendRequest(to: request)
+                        return await sendRequest(to: request, delegate: delegate)
                     case .failure(let failure):
                         return .failure(failure)
                     }
