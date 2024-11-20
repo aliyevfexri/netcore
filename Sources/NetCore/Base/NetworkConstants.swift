@@ -14,6 +14,7 @@ public struct NetworkConstants {
         public static let Authorization: String = "Authorization"
         public static let AcceptLanguage: String = "Accept-Language"
         public static let XClientType: String = "X-Client-Type"
+        public static let XServiceAccessToken: String = "X-Service-Access-Token"
     }
 }
 
