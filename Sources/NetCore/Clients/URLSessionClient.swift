@@ -125,6 +125,7 @@ extension URLSession {
         headers[NetworkConstants.Headers.XClientType] = "iOS"
         headers[NetworkConstants.Headers.ContentType] = "application/json"
         headers[NetworkConstants.Headers.AcceptLanguage] = "az"//TODO: - Changed Fixed Language
+        headers[NetworkConstants.Headers.XAppVersion] = getAppVersion()
         return headers
     }
     
@@ -138,4 +139,11 @@ extension URLSession {
         return true
     }
     
+    func getAppVersion() -> String {
+        let bundleVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
+        let buildVersion: String = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? ""
+        let finalVersion: String = bundleVersion + " (\(buildVersion))"
+        
+        return finalVersion
+    }
 }

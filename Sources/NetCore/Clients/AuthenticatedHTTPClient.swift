@@ -71,6 +71,7 @@ public class AuthenticatedHTTPClient: HTTPClient {
         headers[NetworkConstants.Headers.XClientType] = "iOS"
         headers[NetworkConstants.Headers.ContentType] = "application/json"
         headers[NetworkConstants.Headers.Authorization] = "Bearer \(token)"
+        headers[NetworkConstants.Headers.XAppVersion] = getAppVersion()
         return headers
     }
     
@@ -101,6 +102,14 @@ public class AuthenticatedHTTPClient: HTTPClient {
     private func handleUnauthorized(_ error: Error) {
         guard case RequestError.unauthorized = error else { return }
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "logout"), object: nil)
+    }
+    
+    func getAppVersion() -> String {
+        let bundleVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
+        let buildVersion: String = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? ""
+        let finalVersion: String = bundleVersion + " (\(buildVersion))"
+        
+        return finalVersion
     }
 
 }
