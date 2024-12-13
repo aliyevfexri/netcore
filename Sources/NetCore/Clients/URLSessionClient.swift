@@ -119,13 +119,17 @@ extension URLSession {
         Swift.print("Response ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲")
     }
     
+    private var bundleVersion: String {
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
+    }
+    
     private var getDefaultHeaders: [String: String] {
         var headers:[String : String] = [:]
         headers[NetworkConstants.Headers.XPlatform] = "Mobile"
         headers[NetworkConstants.Headers.XClientType] = "iOS"
         headers[NetworkConstants.Headers.ContentType] = "application/json"
         headers[NetworkConstants.Headers.AcceptLanguage] = "az"//TODO: - Changed Fixed Language
-        headers[NetworkConstants.Headers.XAppVersion] = getAppVersion()
+        headers[NetworkConstants.Headers.XAppVersion] = bundleVersion
         return headers
     }
     
@@ -137,13 +141,5 @@ extension URLSession {
         
         guard newNetworkLostCount < 3 else { return false }
         return true
-    }
-    
-    func getAppVersion() -> String {
-        let bundleVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
-        let buildVersion: String = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String) ?? ""
-        let finalVersion: String = bundleVersion + " (\(buildVersion))"
-        
-        return finalVersion
     }
 }
