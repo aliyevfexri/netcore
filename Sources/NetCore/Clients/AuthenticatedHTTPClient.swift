@@ -11,9 +11,11 @@ public class AuthenticatedHTTPClient: HTTPClient {
     private let networkMonitoring: NetworkMonitor
     private var requestCounter: UInt = 0
     private let maxRequestCount: UInt = 2
+    private var bundleVersion: String {
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
+    }
     let client: HTTPClient
     let tokenProvider: RequestableTokenProvider
-    
     
     public init(client: HTTPClient = URLSession.shared,
                 tokenProvider: RequestableTokenProvider,
@@ -71,6 +73,7 @@ public class AuthenticatedHTTPClient: HTTPClient {
         headers[NetworkConstants.Headers.XClientType] = "iOS"
         headers[NetworkConstants.Headers.ContentType] = "application/json"
         headers[NetworkConstants.Headers.Authorization] = "Bearer \(token)"
+        headers[NetworkConstants.Headers.XAppVersion] = bundleVersion
         return headers
     }
     
@@ -102,5 +105,4 @@ public class AuthenticatedHTTPClient: HTTPClient {
         guard case RequestError.unauthorized = error else { return }
         NotificationCenter.default.post(name: NSNotification.Name(rawValue: "logout"), object: nil)
     }
-
 }
