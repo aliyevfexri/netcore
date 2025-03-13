@@ -13,5 +13,5 @@ public protocol TokenProvider {
 
 public protocol RequestableTokenProvider: TokenProvider {
     var api: HTTPClient { get set }
-    func requestNewToken() async throws -> Result<Void, Error>
+    func requestNewToken() async -> Error?
 }

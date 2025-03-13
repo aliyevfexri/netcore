@@ -59,11 +59,33 @@ public class AuthenticatedHTTPClient: HTTPClient {
             let (data, response) = try result.get()
             return .success((data, response))
         } catch(let error) {
-            guard let newError = await checkExpiredAccessTokenError(error) else {
+            guard case RequestError.expiredAccessToken = error else {
+                return .failure(error)
+            }
+            let refreshError = await refreshAccessToken()
+            if let refreshError {
+                if case RequestError.unauthorized = refreshError {
+                    handleUnauthorized(refreshError)
+                }
+                return .failure(refreshError)
+            } else {
                 return await sendRequest(to: request, delegate: delegate)
             }
-            handleUnauthorized(newError)
-            return .failure(newError)
+        }
+    }
+    
+    private func refreshAccessToken() async -> Error? {
+        //if count is lower than bound, it can request new acces token
+        guard requestCounter < maxRequestCount else { return RequestError.unauthorized }
+        //Requests new token
+        let result = await tokenProvider.requestNewToken()
+        
+        requestCounter += 1
+        if result == nil {
+            requestCounter = 0
+            return nil
+        } else {
+            return result
         }
     }
     
@@ -75,30 +97,6 @@ public class AuthenticatedHTTPClient: HTTPClient {
         headers[NetworkConstants.Headers.Authorization] = "Bearer \(token)"
         headers[NetworkConstants.Headers.XAppVersion] = bundleVersion
         return headers
-    }
-    
-    private func checkExpiredAccessTokenError(_ error: Error) async -> Error? {
-        //Checks if error is expiredAccesToken. If not return error
-        guard case RequestError.expiredAccessToken = error else { return error }
-        //If it is checks can request new acces token with refresh token. If request count is lower than max count it continues. Otherwise it returns unauthorized error and should log out
-        guard requestCounter < maxRequestCount else { return RequestError.unauthorized }
-        //if count is lower than bound, it can request new acces token
-        do {
-            //Requests new token
-            let result = try await tokenProvider.requestNewToken()
-            requestCounter += 1
-            switch result {
-            case .success(_):
-                //Token refreshs and should send previous request again
-                requestCounter = 0
-                return nil
-            case .failure(let failure):
-                //Should finish request and show error
-                return failure
-            }
-        } catch(let error) {
-            return error
-        }
     }
     
     private func handleUnauthorized(_ error: Error) {

@@ -37,13 +37,11 @@ public class FileUploaderClient {
                 do {
                     let result =  try await tokenProvider.requestNewToken()
                     requestCounter += 1
-                    switch result {
-                    case .success(_):
+                    if result == nil {
                         return await sendRequest(to: request, delegate: delegate)
-                    case .failure(let failure):
+                    } else {
                         return .failure(failure)
                     }
-                    
                 } catch(let error) {
                     return .failure(error)
                 }
@@ -66,14 +64,12 @@ public class FileUploaderClient {
         case .failure(let failure):
             if case RequestError.expiredAccessToken = failure {
                 do {
-                    let result =  try await tokenProvider.requestNewToken()
-                    switch result {
-                    case .success(_):
+                    let result = try await tokenProvider.requestNewToken()
+                    if let result{
+                        return .failure(result)
+                    } else {
                         return await sendRequest(to: request, delegate: delegate)
-                    case .failure(let failure):
-                        return .failure(failure)
                     }
-
                 } catch(let error) {
                     return .failure(error)
                 }
