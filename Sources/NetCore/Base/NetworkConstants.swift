@@ -17,5 +17,9 @@ public struct NetworkConstants {
         public static let XServiceAccessToken: String = "X-Service-Access-Token"
         public static let XAppVersion: String = "X-AppVersion"
     }
+    
+    public struct Timers {
+        public static let RefreshWaitingMilliSeconds: Int = 2_000_000_000
+    }
 }
 

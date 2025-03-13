@@ -7,6 +7,13 @@
 
 import Foundation
 
+private class RefreshTokenHandler {
+    static var shared: RefreshTokenHandler = .init()
+    private init() {}
+    
+    var isCurrentlyRefresshing: Bool = false
+}
+
 public class AuthenticatedHTTPClient: HTTPClient {
     private let networkMonitoring: NetworkMonitor
     private var requestCounter: UInt = 0
@@ -54,6 +61,11 @@ public class AuthenticatedHTTPClient: HTTPClient {
         var signedRequest = request
         signedRequest.addAllHTTPHeaderFields(defaultHeaders(with: token))
         
+        if RefreshTokenHandler.shared.isCurrentlyRefresshing {
+            print("⌛️ Waiting For Refresh ⌛️")
+            try? await Task.sleep(nanoseconds: UInt64(NetworkConstants.Timers.RefreshWaitingMilliSeconds))
+        }
+        
         let result:Result<(Data, URLResponse), Error> = await client.sendRequest(to: signedRequest, delegate: delegate)
         do {
             let (data, response) = try result.get()
@@ -66,6 +78,11 @@ public class AuthenticatedHTTPClient: HTTPClient {
             if let refreshError {
                 if case RequestError.unauthorized = refreshError {
                     handleUnauthorized(refreshError)
+                } else if case RequestError.waitingForRefresh = refreshError {
+                    print("⌛️ Waiting For Refresh ⌛️")
+                    try? await Task.sleep(nanoseconds: UInt64(NetworkConstants.Timers.RefreshWaitingMilliSeconds))
+                    print("⌛️ Restarting task ↪️")
+                    return await sendRequest(to: request, delegate: delegate)
                 }
                 return .failure(refreshError)
             } else {
@@ -75,10 +92,16 @@ public class AuthenticatedHTTPClient: HTTPClient {
     }
     
     private func refreshAccessToken() async -> Error? {
+        if RefreshTokenHandler.shared.isCurrentlyRefresshing {
+            return RequestError.waitingForRefresh
+        }
         //if count is lower than bound, it can request new acces token
         guard requestCounter < maxRequestCount else { return RequestError.unauthorized }
+        RefreshTokenHandler.shared.isCurrentlyRefresshing = true
         //Requests new token
         let result = await tokenProvider.requestNewToken()
+        
+        RefreshTokenHandler.shared.isCurrentlyRefresshing = false
         
         requestCounter += 1
         if result == nil {

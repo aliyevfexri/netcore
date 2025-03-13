@@ -10,6 +10,7 @@ public enum RequestError: Error, LocalizedError {
     case unexpectedStatusCode
     case lostConnection
     case unknown
+    case waitingForRefresh
     
     public var errorDescription: String? { return customMessage }
     
@@ -33,6 +34,8 @@ public enum RequestError: Error, LocalizedError {
             return "Unexpected status"
         case .unknown:
             return "Unknown"
+        case .waitingForRefresh:
+            return "Waiting for refresh"
         }
     }
 }

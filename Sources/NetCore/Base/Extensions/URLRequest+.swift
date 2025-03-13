@@ -7,6 +7,17 @@
 
 import Foundation
 
+private class PrinterHandler {
+    static var shared: PrinterHandler = .init()
+    private init() {
+        opQueue = OperationQueue()
+        opQueue.maxConcurrentOperationCount = 1
+        opQueue.qualityOfService = .background
+    }
+    
+    let opQueue: OperationQueue
+}
+
 extension URLRequest {
     public mutating func addAllHTTPHeaderFields(_ newHeaders: [String : String]) {
         let allHeaders = allHTTPHeaderFields ?? [:]
@@ -14,6 +25,7 @@ extension URLRequest {
     }
     
     public func printLogs(with requestID: String){
+        PrinterHandler.shared.opQueue.addOperation {
             let timeDifference = TimeZone.current.secondsFromGMT(for: Date.now)
             let dateForCurrentTimeZone = Date.now.addingTimeInterval(Double(timeDifference))
             
@@ -26,4 +38,5 @@ extension URLRequest {
             Swift.print("ℹ️ URL:", url?.absoluteString ?? "NO URL")
             Swift.print("Request ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲")
         }
+    }
 }
