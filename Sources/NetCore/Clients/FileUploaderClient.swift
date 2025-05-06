@@ -57,25 +57,31 @@ public class FileUploaderClient {
         signedRequest.addAllHTTPHeaderFields(await getDefaultHeaders())
 
         let result:Result<(Data, URLResponse), Error> = await URLSession.shared.sendRequest(to: signedRequest, delegate: delegate)
-
-        switch result {
-        case .success(_):
-            return result
-        case .failure(let failure):
-            if case RequestError.expiredAccessToken = failure {
-                do {
-                    let result = try await tokenProvider.requestNewToken()
-                    if let result{
-                        return .failure(result)
-                    } else {
-                        return await sendRequest(to: request, delegate: delegate)
-                    }
-                } catch(let error) {
-                    return .failure(error)
-                }
-            }
-            return .failure(failure)
+        
+        let res = try? await URLSession.shared.upload(for: signedRequest, from: signedRequest.httpBody!)
+        if let res {
+            return Result.success(res)
+        } else {
+            return .failure(NetCoreError.unknownError)
         }
+//        switch result {
+//        case .success(_):
+//            return result
+//        case .failure(let failure):
+//            if case RequestError.expiredAccessToken = failure {
+//                do {
+//                    let result = try await tokenProvider.requestNewToken()
+//                    if let result{
+//                        return .failure(result)
+//                    } else {
+//                        return await sendRequest(to: request, delegate: delegate)
+//                    }
+//                } catch(let error) {
+//                    return .failure(error)
+//                }
+//            }
+//            return .failure(failure)
+//        }
     }
     
     private func getDefaultHeaders() async -> [String : String] {
