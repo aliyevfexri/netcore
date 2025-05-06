@@ -34,54 +34,39 @@ public class FileUploaderClient {
         case .failure(let failure):
             if case RequestError.expiredAccessToken = failure {
                 guard requestCounter < maxRequestCount else { return .failure(RequestError.unauthorized) }
-                do {
-                    let result =  try await tokenProvider.requestNewToken()
-                    requestCounter += 1
-                    if result == nil {
-                        return await sendRequest(to: request, delegate: delegate)
-                    } else {
-                        return .failure(failure)
-                    }
-                } catch(let error) {
-                    return .failure(error)
+                
+                let result = await tokenProvider.requestNewToken()
+                requestCounter += 1
+                if result == nil {
+                    return await sendRequest(to: request, delegate: delegate)
+                } else {
+                    return .failure(failure)
                 }
             }
             return .failure(failure)
         }
     }
     
-    public func sendRequest(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async  -> Result<(Data, URLResponse), Error> {
+    private func sendRequest(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async  -> Result<(Data, URLResponse), Error> {
         guard networkMonitoring.isConnected else { return .failure(RequestError.lostConnection)}
-
+        
+        let requestID: String = UUID().uuidString
         var signedRequest = request
         signedRequest.addAllHTTPHeaderFields(await getDefaultHeaders())
-
-        let result:Result<(Data, URLResponse), Error> = await URLSession.shared.sendRequest(to: signedRequest, delegate: delegate)
         
-        let res = try? await URLSession.shared.upload(for: signedRequest, from: signedRequest.httpBody!)
-        if let res {
-            return Result.success(res)
+        let result = try? await URLSession.shared.upload(for: signedRequest, from: signedRequest.httpBody!)
+        
+        if let result {
+            if let handledError = JSONResponseHandler().handle(with: result.0, and: result.1) {
+                printResponseLogs(requestID: requestID, response: result.1, result: .failure(handledError))
+                return .failure(handledError)
+            } else {
+                printResponseLogs(requestID: requestID, response: result.1, result: .success(result.0))
+                return .success(result)
+            }
         } else {
             return .failure(NetCoreError.unknownError)
         }
-//        switch result {
-//        case .success(_):
-//            return result
-//        case .failure(let failure):
-//            if case RequestError.expiredAccessToken = failure {
-//                do {
-//                    let result = try await tokenProvider.requestNewToken()
-//                    if let result{
-//                        return .failure(result)
-//                    } else {
-//                        return await sendRequest(to: request, delegate: delegate)
-//                    }
-//                } catch(let error) {
-//                    return .failure(error)
-//                }
-//            }
-//            return .failure(failure)
-//        }
     }
     
     private func getDefaultHeaders() async -> [String : String] {
@@ -96,6 +81,33 @@ public class FileUploaderClient {
         return headers
     }
 
-    
+    func printResponseLogs(requestID: String, response: URLResponse?, result: Result<Data?, Error>){
+        let timeDifference = TimeZone.current.secondsFromGMT(for: Date.now)
+        let dateForCurrentTimeZone = Date.now.addingTimeInterval(Double(timeDifference))
+        var isSuccess = (try? result.get() != nil) ?? false
+        switch result {
+        case .success: break;
+        case .failure: isSuccess = false
+        }
+        
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        
+        Swift.print("Response ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼")
+        Swift.print("ℹ️ RequestID:", requestID)
+        Swift.print("ℹ️ Response Time:", dateForCurrentTimeZone)
+        if response != nil { print("ℹ️ Response statusCode:", statusCode, "\(isSuccess ? "✅":"❌")") }
+        switch result {
+        case .success(let data):
+            if let data {
+                print("ℹ️ Data", String(decoding: data, as: UTF8.self))
+            } else {
+                print("ℹ️ Data", "data IS NILL")
+            }
+        case .failure(let failure):
+            print("ℹ️ Error", failure);
+        }
+        
+        Swift.print("Response ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲")
+    }
     
 }
