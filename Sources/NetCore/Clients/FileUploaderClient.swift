@@ -53,6 +53,7 @@ public class FileUploaderClient {
         let requestID: String = UUID().uuidString
         var signedRequest = request
         signedRequest.addAllHTTPHeaderFields(await getDefaultHeaders())
+        signedRequest.printLogs(with: requestID)
         
         let uploadData = signedRequest.httpBody
         signedRequest.httpBody = nil
@@ -69,6 +70,7 @@ public class FileUploaderClient {
                 return .success(result)
             }
         } else {
+            print("❌ERROR Code: 1228")
             return .failure(NetCoreError.unknownError)
         }
     }
