@@ -54,7 +54,11 @@ public class FileUploaderClient {
         var signedRequest = request
         signedRequest.addAllHTTPHeaderFields(await getDefaultHeaders())
         
-        let result = try? await URLSession.shared.upload(for: signedRequest, from: signedRequest.httpBody!)
+        let uploadData = signedRequest.httpBody
+        signedRequest.httpBody = nil
+        
+        guard let uploadData else { return .failure(NetCoreError.backendError("No data to upload")) }
+        let result = try? await URLSession.shared.upload(for: signedRequest, from: uploadData)
         
         if let result {
             if let handledError = JSONResponseHandler().handle(with: result.0, and: result.1) {
