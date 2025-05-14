@@ -15,9 +15,8 @@ private class RefreshTokenHandler {
 }
 
 public class AuthenticatedHTTPClient: HTTPClient {
-    private let networkMonitoring: NetworkMonitor
-    private var requestCounter: UInt = 0
-    private let maxRequestCount: UInt = 2
+//    private let networkMonitoring: NetworkMonitor
+
     private var bundleVersion: String {
         (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
     }
@@ -29,7 +28,7 @@ public class AuthenticatedHTTPClient: HTTPClient {
                 networkMonitoring: NetworkMonitor = NetworkMonitor.shared) {
         self.client = client
         self.tokenProvider = tokenProvider
-        self.networkMonitoring = networkMonitoring
+//        self.networkMonitoring = networkMonitoring
     }
     
     @discardableResult
@@ -55,7 +54,7 @@ public class AuthenticatedHTTPClient: HTTPClient {
     }
     
     public func sendRequest(to request: URLRequest, delegate: (any URLSessionTaskDelegate)?) async -> Result<(Data, URLResponse), Error> {
-        guard networkMonitoring.isConnected else { return .failure(RequestError.lostConnection) }
+//        guard networkMonitoring.isConnected else { return .failure(RequestError.lostConnection) }
         guard let token = tokenProvider.getToken() else { return .failure(RequestError.expiredAccessToken) }
         
         var signedRequest = request
@@ -95,21 +94,14 @@ public class AuthenticatedHTTPClient: HTTPClient {
         if RefreshTokenHandler.shared.isCurrentlyRefresshing {
             return RequestError.waitingForRefresh
         }
-        //if count is lower than bound, it can request new acces token
-        guard requestCounter < maxRequestCount else { return RequestError.unauthorized }
+        
         RefreshTokenHandler.shared.isCurrentlyRefresshing = true
         //Requests new token
         let result = await tokenProvider.requestNewToken()
         
         RefreshTokenHandler.shared.isCurrentlyRefresshing = false
         
-        requestCounter += 1
-        if result == nil {
-            requestCounter = 0
-            return nil
-        } else {
-            return result
-        }
+        return result
     }
     
     private func defaultHeaders(with token: String) -> [String : String] {
