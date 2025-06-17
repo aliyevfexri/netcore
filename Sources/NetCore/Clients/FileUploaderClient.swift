@@ -59,7 +59,12 @@ public class FileUploaderClient {
         signedRequest.httpBody = nil
         
         guard let uploadData else { return .failure(NetCoreError.backendError("No data to upload")) }
-        let result = try? await URLSession.shared.upload(for: signedRequest, from: uploadData, delegate: delegate)
+        
+        let session = URLSession.shared
+        session.configuration.timeoutIntervalForRequest = 300
+        session.configuration.timeoutIntervalForResource = 300
+        
+        let result = try? await session.upload(for: signedRequest, from: uploadData, delegate: delegate)
         
         if let result {
             if let handledError = JSONResponseHandler().handle(with: result.0, and: result.1) {
