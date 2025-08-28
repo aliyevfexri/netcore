@@ -130,6 +130,7 @@ extension URLSession {
         headers[NetworkConstants.Headers.ContentType] = "application/json"
         headers[NetworkConstants.Headers.AcceptLanguage] = "az"//TODO: - Changed Fixed Language
         headers[NetworkConstants.Headers.XAppVersion] = bundleVersion
+        headers.merge(NetCoreConfiguration.shared.extraHeaders) { (_, new) in new }
         return headers
     }
     
