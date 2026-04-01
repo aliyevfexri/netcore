@@ -128,7 +128,7 @@ extension URLSession {
         headers[NetworkConstants.Headers.XPlatform] = "Mobile"
         headers[NetworkConstants.Headers.XClientType] = "iOS"
         headers[NetworkConstants.Headers.ContentType] = "application/json"
-        headers[NetworkConstants.Headers.AcceptLanguage] = "az"//TODO: - Changed Fixed Language
+        headers[NetworkConstants.Headers.AcceptLanguage] = "az" // Default fallback; overridden by NetCoreConfiguration.shared.extraHeaders
         headers[NetworkConstants.Headers.XAppVersion] = bundleVersion
         headers.merge(NetCoreConfiguration.shared.extraHeaders) { (_, new) in new }
         return headers
