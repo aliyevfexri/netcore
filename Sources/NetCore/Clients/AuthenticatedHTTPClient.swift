@@ -116,6 +116,11 @@ public class AuthenticatedHTTPClient: HTTPClient {
     
     private func handleUnauthorized(_ error: Error) {
         guard case RequestError.unauthorized = error else { return }
-        NotificationCenter.default.post(name: NSNotification.Name(rawValue: "logout"), object: nil)
+        if let onAuthenticationFailure = NetCoreConfiguration.shared.onAuthenticationFailure {
+            onAuthenticationFailure()
+        } else {
+            // Legacy fallback for consumers that have not registered a handler.
+            NotificationCenter.default.post(name: NSNotification.Name(rawValue: "logout"), object: nil)
+        }
     }
 }
