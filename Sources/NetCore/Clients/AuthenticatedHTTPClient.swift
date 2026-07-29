@@ -90,6 +90,19 @@ public class AuthenticatedHTTPClient: HTTPClient {
         }
     }
     
+    @discardableResult
+    public func sendRequestWithoutRecovery(to request: URLRequest, signedWith token: String, delegate: (any URLSessionTaskDelegate)?) async -> Error? {
+        var signedRequest = request
+        signedRequest.addAllHTTPHeaderFields(defaultHeaders(with: token))
+        let result: Result<(Data, URLResponse), Error> = await client.sendRequest(to: signedRequest, delegate: delegate)
+        switch result {
+        case .success:
+            return nil
+        case .failure(let error):
+            return error
+        }
+    }
+
     private func refreshAccessToken() async -> Error? {
         if RefreshTokenHandler.shared.isCurrentlyRefresshing {
             return RequestError.waitingForRefresh
